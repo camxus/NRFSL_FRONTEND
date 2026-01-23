@@ -99,7 +99,7 @@ interface FormData {
 
 interface UploadedFiles {
   passport: File | null;
-  facePhoto: File | null;
+  identity: File | null;
   signature: File | null;
   utilityBill: File | null;
 }
@@ -111,7 +111,7 @@ const STEPS = [
   { id: 2, title: "NIN Verification", icon: User },
   { id: 3, title: "Personal Information", icon: Home },
   { id: 4, title: "Passport Photo", icon: Camera },
-  { id: 5, title: "Face Photo", icon: User },
+  { id: 5, title: "Identity", icon: User },
   { id: 6, title: "Utility Bill", icon: FileText },
   { id: 7, title: "Signature", icon: PenTool },
   { id: 8, title: "Review", icon: ClipboardCheck },
@@ -142,7 +142,7 @@ export default function SignUpForm() {
   });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({
     passport: null,
-    facePhoto: null,
+    identity: null,
     signature: null,
     utilityBill: null,
   });
@@ -331,8 +331,8 @@ export default function SignUpForm() {
         }
         break;
       case 5:
-        if (!uploadedFiles.facePhoto) {
-          setErrors({ facePhoto: "Face photo is required" });
+        if (!uploadedFiles.identity) {
+          setErrors({ identity: "ID is required" });
           return;
         }
         break;
@@ -400,10 +400,9 @@ export default function SignUpForm() {
         residentOtherLGA: ""
       },
       passport: uploadedFiles.passport,
-      // identity uploadedFiles,
       utility: uploadedFiles.utilityBill,
       signature: uploadedFiles.signature,
-      face_photo: uploadedFiles.facePhoto,
+      identity: uploadedFiles.identity,
     });
     router.push("/")
 
@@ -465,7 +464,7 @@ export default function SignUpForm() {
                 Create Your Account
               </h2>
               <span className="text-sm text-muted-foreground">
-                Step {step} of {STEPS.length}
+                Step {step + 1} of {STEPS.length}
               </span>
             </div>
 
@@ -475,7 +474,7 @@ export default function SignUpForm() {
                 <motion.div
                   className="h-full bg-primary"
                   initial={{ width: 0 }}
-                  animate={{ width: `${(step / STEPS.length) * 100}%` }}
+                  animate={{ width: `${(step + 1/ STEPS.length) * 100}%` }}
                   transition={{ duration: 0.3 }}
                 />
               </div>
@@ -518,7 +517,7 @@ export default function SignUpForm() {
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-xl text-foreground">
-                {STEPS[step - 1].title}
+                {STEPS[step].title}
               </CardTitle>
               <CardDescription>
                 {step === 0 && "Create your account"}
@@ -526,7 +525,7 @@ export default function SignUpForm() {
                 {step === 2 && "Enter your National Identification Number (NIN)"}
                 {step === 3 && "Provide your personal details"}
                 {step === 4 && "Upload a clear passport photograph"}
-                {step === 5 && "Take or upload a photo of your face"}
+                {step === 5 && "Take or upload a photo of your ID"}
                 {step === 6 && "Upload a recent utility bill"}
                 {step === 7 && "Draw or upload your signature"}
                 {step === 8 && "Review all your information before submission"}
@@ -585,15 +584,15 @@ export default function SignUpForm() {
                   />
                 )}
 
-                {/* Step 5: Face Photo */}
+                {/* Step 5: Identity Photo */}
                 {step === 5 && (
                   <StepFileUpload
-                    title="Face Photo / Identity Image"
-                    description="Upload a clear photo of your face for identity verification"
-                    file={uploadedFiles.facePhoto}
-                    onUpload={(files) => handleFileUpload("facePhoto", files)}
-                    onRemove={() => removeFile("facePhoto")}
-                    error={errors.facePhoto}
+                    title="Identity Image"
+                    description="Upload a clear photo of your identity verification"
+                    file={uploadedFiles.identity}
+                    onUpload={(files) => handleFileUpload("identity", files)}
+                    onRemove={() => removeFile("identity")}
+                    error={errors.identity}
                     accept="image/*"
                   />
                 )}
@@ -687,7 +686,7 @@ function StepCredentials({
   onChange,
   errors,
 }: {
-  formData: FormData;
+  formData: FormData & { repeat_password?: string };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   errors: Record<string, string>;
 }) {
@@ -724,8 +723,9 @@ function StepCredentials({
             value={formData.first_name}
             onChange={onChange}
             placeholder="Enter your first name"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.first_name ? "border-destructive" : ""
-              }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
+              errors.first_name ? "border-destructive" : ""
+            }`}
           />
           <ErrorTooltip error={errors.first_name} />
         </div>
@@ -744,14 +744,15 @@ function StepCredentials({
             value={formData.last_name}
             onChange={onChange}
             placeholder="Enter your last name"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.last_name ? "border-destructive" : ""
-              }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
+              errors.last_name ? "border-destructive" : ""
+            }`}
           />
           <ErrorTooltip error={errors.last_name} />
         </div>
       </div>
 
-      {/* Birthdate (ShadCN DatePicker) */}
+      {/* Birthdate */}
       <div className="space-y-2">
         <Label htmlFor="birthdate" className="text-foreground">
           Birthdate
@@ -760,10 +761,10 @@ function StepCredentials({
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className={`w-full justify-start text-left ${!birthdate ? "text-muted-foreground" : ""
-                } ${errors.birthdate ? "border-destructive" : ""}`}
+              className={`w-full justify-start text-left ${
+                !birthdate ? "text-muted-foreground" : ""
+              } ${errors.birthdate ? "border-destructive" : ""}`}
             >
-              <Calendar className="mr-2 h-4 w-4" />
               {birthdate ? format(birthdate, "PPP") : "Select your birthdate"}
             </Button>
           </PopoverTrigger>
@@ -792,8 +793,9 @@ function StepCredentials({
             value={formData.email}
             onChange={onChange}
             placeholder="you@example.com"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.email ? "border-destructive" : ""
-              }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
+              errors.email ? "border-destructive" : ""
+            }`}
           />
           <ErrorTooltip error={errors.email} />
         </div>
@@ -812,10 +814,32 @@ function StepCredentials({
             value={formData.password}
             onChange={onChange}
             placeholder="Enter a secure password"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.password ? "border-destructive" : ""
-              }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
+              errors.password ? "border-destructive" : ""
+            }`}
           />
           <ErrorTooltip error={errors.password} />
+        </div>
+      </div>
+
+      {/* Repeat Password */}
+      <div className="space-y-2">
+        <Label htmlFor="repeat_password" className="text-foreground">
+          Repeat Password
+        </Label>
+        <div className="relative">
+          <Input
+            id="repeat_password"
+            name="repeat_password"
+            type="password"
+            value={formData.repeat_password || ""}
+            onChange={onChange}
+            placeholder="Repeat your password"
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
+              errors.repeat_password ? "border-destructive" : ""
+            }`}
+          />
+          <ErrorTooltip error={errors.repeat_password} />
         </div>
       </div>
     </motion.div>
@@ -1411,9 +1435,9 @@ function StepReview({
       file: uploadedFiles.passport,
     },
     {
-      label: "Face Photo",
-      uploaded: !!uploadedFiles.facePhoto,
-      file: uploadedFiles.facePhoto,
+      label: "Identity",
+      uploaded: !!uploadedFiles.identity,
+      file: uploadedFiles.identity,
     },
     {
       label: "Signature",

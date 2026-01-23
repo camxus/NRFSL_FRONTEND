@@ -10,9 +10,8 @@ export interface User {
   kyc: {
     bvn: number,
     nin: number,
-    face_photo: string,
-    passport: string,
     identity: string,
+    passport: string,
     utility: string,
     signature: string,
     religion: string,
@@ -41,7 +40,7 @@ export interface S3Location {
 
 type KycWithoutFiles = Omit<
   User["kyc"], 
-  "passport" | "identity" | "utility" | "signature" | "face_photo"
+  "passport" | "identity" | "utility" | "signature" | "identity"
 >;
 
 type PartialUserWithoutFiles = Omit<Partial<User>, "kyc"> & {
@@ -61,7 +60,6 @@ export interface SignupRequest extends Partial<PartialUserWithoutFiles> {
   identity?: File | null;
   utility?: File | null;
   signature?: File | null;
-  face_photo?: File | null;
 }
 
 export interface SignupResponse {
@@ -132,7 +130,7 @@ export const authApi = {
     if (data.identity) formData.append("identity", data.identity);
     if (data.utility) formData.append("utility", data.utility);
     if (data.signature) formData.append("signature", data.signature);
-    if (data.face_photo) formData.append("face_photo", data.face_photo);
+    if (data.identity) formData.append("identity", data.identity);
 
     return api.post("/auth/signup", formData, {
       headers: {
