@@ -121,8 +121,6 @@ export const authApi = {
     formData.append("birthdate", data.birthdate);
     if (data.kyc) formData.append("kyc", JSON.stringify(data.kyc));
     
-    if (data.kyc) formData.append("kyc", JSON.stringify(data.kyc));
-    
     if (data.avatar) formData.append("avatar", JSON.stringify(data.avatar));
     if (data.avatar_file) formData.append("avatar_file", data.avatar_file);
 

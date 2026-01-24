@@ -15,7 +15,7 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = 'label',
+  captionLayout = 'dropdown',
   buttonVariant = 'ghost',
   formatters,
   components,
@@ -125,48 +125,61 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return (
-            <div
-              data-slot="calendar"
-              ref={rootRef}
-              className={cn(className)}
-              {...props}
-            />
-          )
-        },
-        Chevron: ({ className, orientation, ...props }) => {
+        Chevron: ({ orientation, className, ...props }) => {
           if (orientation === 'left') {
-            return (
-              <ChevronLeftIcon className={cn('size-4', className)} {...props} />
-            )
+            return <ChevronLeftIcon className={cn('size-4', className)} {...props} />
           }
-
           if (orientation === 'right') {
-            return (
-              <ChevronRightIcon
-                className={cn('size-4', className)}
-                {...props}
-              />
-            )
+            return <ChevronRightIcon className={cn('size-4', className)} {...props} />
           }
-
-          return (
-            <ChevronDownIcon className={cn('size-4', className)} {...props} />
-          )
+          return <ChevronDownIcon className={cn('size-4', className)} {...props} />
         },
         DayButton: CalendarDayButton,
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          )
-        },
         ...components,
       }}
+      // components={{
+      //   Root: ({ className, rootRef, ...props }) => {
+      //     return (
+      //       <div
+      //         data-slot="calendar"
+      //         ref={rootRef}
+      //         className={cn(className)}
+      //         {...props}
+      //       />
+      //     )
+      //   },
+      //   Chevron: ({ className, orientation, ...props }) => {
+      //     if (orientation === 'left') {
+      //       return (
+      //         <ChevronLeftIcon className={cn('size-4', className)} {...props} />
+      //       )
+      //     }
+
+      //     if (orientation === 'right') {
+      //       return (
+      //         <ChevronRightIcon
+      //           className={cn('size-4', className)}
+      //           {...props}
+      //         />
+      //       )
+      //     }
+
+      //     return (
+      //       <ChevronDownIcon className={cn('size-4', className)} {...props} />
+      //     )
+      //   },
+      //   DayButton: CalendarDayButton,
+      //   WeekNumber: ({ children, ...props }) => {
+      //     return (
+      //       <td {...props}>
+      //         <div className="flex size-(--cell-size) items-center justify-center text-center">
+      //           {children}
+      //         </div>
+      //       </td>
+      //     )
+      //   },
+      //   ...components,
+      // }}
       {...props}
     />
   )

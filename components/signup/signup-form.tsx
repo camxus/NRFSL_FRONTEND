@@ -53,6 +53,8 @@ import { useRouter } from "next/navigation";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { format } from "date-fns";
+import { DateTimePicker } from "../ui/datetime";
+import { compressImage } from "@/lib/image-compression";
 
 // Error tooltip component
 function ErrorTooltip({ error }: { error?: string }) {
@@ -118,7 +120,7 @@ const STEPS = [
 ];
 
 export default function SignUpForm() {
-  const { signup: { mutateAsync: signup } } = useAuth()
+  const { signup: { mutateAsync: signup, isPending: isSubmitting } } = useAuth()
   const router = useRouter()
 
   const [step, setStep] = useState(0);
@@ -147,7 +149,6 @@ export default function SignUpForm() {
     utilityBill: null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -168,15 +169,31 @@ export default function SignUpForm() {
     }
   };
 
-  const handleFileUpload = (
+  const handleFileUpload = async (
     key: keyof UploadedFiles,
     files: FileList | null
   ) => {
-    if (files && files.length > 0) {
-      setUploadedFiles((prev) => ({ ...prev, [key]: files[0] }));
+    if (!files || files.length === 0) return;
+
+    let file = files[0];
+
+    try {
+      // ✅ Only compress images (never PDFs)
+      if (file.type.startsWith("image/")) {
+        file = await compressImage(file);
+      }
+
+      setUploadedFiles((prev) => ({ ...prev, [key]: file }));
+
       if (errors[key]) {
         setErrors((prev) => ({ ...prev, [key]: "" }));
       }
+    } catch (err) {
+      console.error("Image compression failed:", err);
+      setErrors((prev) => ({
+        ...prev,
+        [key]: "Image compression failed. Please try another image.",
+      }));
     }
   };
 
@@ -350,12 +367,18 @@ export default function SignUpForm() {
         if (hasSignature && !uploadedFiles.signature) {
           const canvas = signatureCanvasRef.current;
           if (canvas) {
-            canvas.toBlob((blob) => {
+            canvas.toBlob(async (blob) => {
               if (blob) {
-                const file = new File([blob], "signature.png", {
+                const rawFile = new File([blob], "signature.png", {
                   type: "image/png",
                 });
-                setUploadedFiles((prev) => ({ ...prev, signature: file }));
+
+                const compressed = await compressImage(rawFile);
+
+                setUploadedFiles((prev) => ({
+                  ...prev,
+                  signature: compressed,
+                }));
               }
             }, "image/png");
           }
@@ -369,15 +392,13 @@ export default function SignUpForm() {
   };
 
   const goBack = () => {
-    if (step > 1) {
+    if (step > 0) {
       setStep(step - 1);
       setErrors({});
     }
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-
     // Simulate API call
     await signup({
       password: formData.password,
@@ -404,10 +425,8 @@ export default function SignUpForm() {
       signature: uploadedFiles.signature,
       identity: uploadedFiles.identity,
     });
-    router.push("/")
 
-    setIsSubmitting(false);
-    setSubmitSuccess(true);
+    setSubmitSuccess(true)
   };
 
   if (submitSuccess) {
@@ -474,7 +493,7 @@ export default function SignUpForm() {
                 <motion.div
                   className="h-full bg-primary"
                   initial={{ width: 0 }}
-                  animate={{ width: `${(step + 1/ STEPS.length) * 100}%` }}
+                  animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
                   transition={{ duration: 0.3 }}
                 />
               </div>
@@ -641,7 +660,7 @@ export default function SignUpForm() {
 
               {/* Navigation Buttons */}
               <div className="flex gap-4 mt-8 pt-6 border-t border-border">
-                {step > 1 && (
+                {step > 0 && (
                   <Button
                     type="button"
                     variant="outline"
@@ -723,9 +742,8 @@ function StepCredentials({
             value={formData.first_name}
             onChange={onChange}
             placeholder="Enter your first name"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
-              errors.first_name ? "border-destructive" : ""
-            }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.first_name ? "border-destructive" : ""
+              }`}
           />
           <ErrorTooltip error={errors.first_name} />
         </div>
@@ -744,9 +762,8 @@ function StepCredentials({
             value={formData.last_name}
             onChange={onChange}
             placeholder="Enter your last name"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
-              errors.last_name ? "border-destructive" : ""
-            }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.last_name ? "border-destructive" : ""
+              }`}
           />
           <ErrorTooltip error={errors.last_name} />
         </div>
@@ -757,26 +774,13 @@ function StepCredentials({
         <Label htmlFor="birthdate" className="text-foreground">
           Birthdate
         </Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={`w-full justify-start text-left ${
-                !birthdate ? "text-muted-foreground" : ""
-              } ${errors.birthdate ? "border-destructive" : ""}`}
-            >
-              {birthdate ? format(birthdate, "PPP") : "Select your birthdate"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              required
-              mode="single"
-              selected={birthdate || new Date()}
-              onSelect={handleDateChange}
-            />
-          </PopoverContent>
-        </Popover>
+        <DateTimePicker
+          value={birthdate || new Date()}
+          onChange={(date) => {
+            handleDateChange(date);
+          }}
+          className={errors.birthdate ? "border-destructive" : ""}
+        />
         <ErrorTooltip error={errors.birthdate} />
       </div>
 
@@ -793,9 +797,8 @@ function StepCredentials({
             value={formData.email}
             onChange={onChange}
             placeholder="you@example.com"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
-              errors.email ? "border-destructive" : ""
-            }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.email ? "border-destructive" : ""
+              }`}
           />
           <ErrorTooltip error={errors.email} />
         </div>
@@ -814,9 +817,8 @@ function StepCredentials({
             value={formData.password}
             onChange={onChange}
             placeholder="Enter a secure password"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
-              errors.password ? "border-destructive" : ""
-            }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.password ? "border-destructive" : ""
+              }`}
           />
           <ErrorTooltip error={errors.password} />
         </div>
@@ -835,9 +837,8 @@ function StepCredentials({
             value={formData.repeat_password || ""}
             onChange={onChange}
             placeholder="Repeat your password"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${
-              errors.repeat_password ? "border-destructive" : ""
-            }`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${errors.repeat_password ? "border-destructive" : ""
+              }`}
           />
           <ErrorTooltip error={errors.repeat_password} />
         </div>
