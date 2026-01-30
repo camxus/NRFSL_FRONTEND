@@ -23,6 +23,7 @@ export const AUTH_USER_KEY = "user";
 export function useAuth() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const [providusToken, setProvidusToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null);
 
   // Get user profile if authenticated
@@ -48,8 +49,8 @@ export function useAuth() {
 
   // Signup mutation
   const signup = useMutation({
-    mutationFn: authApi.signup,
-    onSuccess: () => {},
+    mutationFn: (data: SignupRequest) => authApi.signup({...data, providus_token: providusToken}),
+    onSuccess: () => { },
     onError: (error: Error) => {
       setError(error.message || "Failed to create account");
     },
@@ -103,7 +104,7 @@ export function useAuth() {
   // Forgot Password mutation
   const forgotPassword = useMutation({
     mutationFn: authApi.forgotPassword,
-    onSuccess: () => {},
+    onSuccess: () => { },
     onError: (error: Error) => {
       setError(error.message || "Failed to start password reset");
     },
@@ -112,7 +113,7 @@ export function useAuth() {
   // Confirm Password mutation
   const confirmPassword = useMutation({
     mutationFn: authApi.confirmPassword,
-    onSuccess: () => {},
+    onSuccess: () => { },
     onError: (error: Error) => {
       setError(error.message || "Failed to confirm password reset");
     },
@@ -121,20 +122,47 @@ export function useAuth() {
   // Set New Password mutation
   const setNewPassword = useMutation({
     mutationFn: authApi.setNewPassword,
-    onSuccess: () => {},
+    onSuccess: () => { },
     onError: (error: Error) => {
       setError(error.message || "Failed to set new password");
     },
   });
 
+  // BVN validation
+  const validateBVN = useMutation({
+    mutationFn: authApi.validateBVN,
+    onError: (error: Error) => {
+      setError(error.message || "Failed to validate BVN");
+    },
+  });
+
+  // BVN verification
+  const verifyBVNToken = useMutation({
+    mutationFn: authApi.verifyBVNToken,
+    onSuccess: (data) => {
+      if (data?.result?.accessToken) {
+        setProvidusToken(data.result.accessToken)
+      } else {
+        setError('No access token returned from Providus')
+      }
+    },
+    onError: (error: Error) => {
+      setError(error.message || 'Failed to verify BVN token')
+    },
+  })
+
+
   return {
     user,
     error,
+    providusToken,
 
     signup,
     login,
     logout,
     refresh,
+    validateBVN,
+    verifyBVNToken,
 
     forgotPassword,
     confirmPassword,

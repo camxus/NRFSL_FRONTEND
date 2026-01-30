@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login: { mutate: login, isPending: isLoggingIn } } = useAuth();
+  const { login: { mutateAsync: login, isPending: isLoggingIn } } = useAuth();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +35,7 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       await login({ email: formData.email, password: formData.password });
-      router.push("/dashboard");
+      router.push("/welcome");
     } catch {
       toast({
         title: "Login failed",
@@ -63,7 +63,7 @@ export default function LoginPage() {
                 Welcome Back
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                Sign in to your SecureBank account
+                Sign in to your DiasporaWallet account
               </CardDescription>
             </div>
           </CardHeader>

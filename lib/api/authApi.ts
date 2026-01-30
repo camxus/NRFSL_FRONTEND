@@ -39,7 +39,7 @@ export interface S3Location {
 }
 
 type KycWithoutFiles = Omit<
-  User["kyc"], 
+  User["kyc"],
   "passport" | "identity" | "utility" | "signature" | "identity"
 >;
 
@@ -106,12 +106,21 @@ export interface SetNewPasswordRequest {
   newPassword: string;
 }
 
+export interface BVNValidateInput {
+  bvn_token: string;
+}
+
+export interface BVNVerifyInput {
+  bvn_token: string;
+  verify_token: string;
+}
+
 // Auth API functions
 export const authApi = {
   /**
    * Register a new user
    */
-  signup: (data: SignupRequest): Promise<SignupResponse> => {
+  signup: (data: SignupRequest & {providus_token: string | null}): Promise<SignupResponse> => {
     const formData = new FormData();
 
     formData.append("email", data.email);
@@ -120,7 +129,7 @@ export const authApi = {
     formData.append("last_name", data.last_name);
     formData.append("birthdate", data.birthdate);
     if (data.kyc) formData.append("kyc", JSON.stringify(data.kyc));
-    
+
     if (data.avatar) formData.append("avatar", JSON.stringify(data.avatar));
     if (data.avatar_file) formData.append("avatar_file", data.avatar_file);
 
@@ -128,7 +137,6 @@ export const authApi = {
     if (data.identity) formData.append("identity", data.identity);
     if (data.utility) formData.append("utility", data.utility);
     if (data.signature) formData.append("signature", data.signature);
-    if (data.identity) formData.append("identity", data.identity);
 
     return api.post("/auth/signup", formData, {
       headers: {
@@ -178,4 +186,12 @@ export const authApi = {
   setNewPassword: (data: SetNewPasswordRequest): Promise<void> => {
     return api.post("/auth/set-new-password", data);
   },
+
+  validateBVN: (data: BVNValidateInput) => {
+    return api.post("/validate-bvn", data);
+  },
+
+  verifyBVNToken: (data: BVNVerifyInput) => {
+    return api.post("/verify-bvn", data);
+  }
 };

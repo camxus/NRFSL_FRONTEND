@@ -55,6 +55,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { format } from "date-fns";
 import { DateTimePicker } from "../ui/datetime";
 import { compressImage } from "@/lib/image-compression";
+import { useTheme } from "next-themes";
+import { useDialog } from "@/hooks/use-dialog";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
 
 // Error tooltip component
 function ErrorTooltip({ error }: { error?: string }) {
@@ -120,7 +123,9 @@ const STEPS = [
 ];
 
 export default function SignUpForm() {
-  const { signup: { mutateAsync: signup, isPending: isSubmitting } } = useAuth()
+  const { theme } = useTheme();
+
+  const { signup: { mutateAsync: signup, isPending: isSubmitting }, providusToken } = useAuth()
   const router = useRouter()
 
   const [step, setStep] = useState(0);
@@ -183,7 +188,8 @@ export default function SignUpForm() {
         file = await compressImage(file);
       }
 
-      setUploadedFiles((prev) => ({ ...prev, [key]: file }));
+      setUploadedFiles((prev) => (
+        { ...prev, [key]: file }));
 
       if (errors[key]) {
         setErrors((prev) => ({ ...prev, [key]: "" }));
@@ -221,9 +227,11 @@ export default function SignUpForm() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const strokeColor = theme === "dark" ? "#ffffff" : "#000000";
+
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.strokeStyle = "#ffffff";
+    ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.stroke();
@@ -289,6 +297,11 @@ export default function SignUpForm() {
       setErrors({ bvn: "BVN must contain only numbers" });
       return false;
     }
+
+    if (!providusToken) {
+      setErrors({ bvn: "BVN must be valid" });
+    }
+    
     return true;
   };
 
@@ -465,7 +478,7 @@ export default function SignUpForm() {
         {/* Header */}
         <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-foreground">SecureBank</h1>
+            <h1 className="text-xl font-bold text-foreground">DiasporaWallet</h1>
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link href="/login" className="text-primary hover:underline">
@@ -568,6 +581,7 @@ export default function SignUpForm() {
                     value={formData.bvn}
                     onChange={handleInputChange}
                     error={errors.bvn}
+                    goNext={goNext}
                   />
                 )}
 
@@ -848,15 +862,91 @@ function StepCredentials({
 }
 
 // Step Components
-function StepBVN({
+function OTPDialog({
+  bvn,
+  onVerify,
+}: {
+  bvn: string;
+  onVerify: (otp: string) => void;
+}) {
+  const [otp, setOtp] = useState("");
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Enter the OTP sent to your registered phone number for BVN {bvn}.
+      </p>
+      <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
+        <InputOTPGroup className="mx-auto">
+          {Array.from({ length }).map((_, i) => (
+            <InputOTPSlot key={i} index={i} />
+          ))}
+        </InputOTPGroup>
+      </InputOTP>
+
+      <Button
+        className="w-full"
+        onClick={() => onVerify(otp)}
+        disabled={otp.length !== 6}
+      >
+        Verify OTP
+      </Button>
+    </div>
+  );
+}
+
+export function StepBVN({
   value,
   onChange,
   error,
+  goNext
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: string;
+  goNext: () => Promise<void>
 }) {
+  const { validateBVN: { mutateAsync: validateBVN }, verifyBVNToken: { mutateAsync: verifyBVNToken } } = useAuth();
+  const { show, hide } = useDialog()
+
+  const [loading, setLoading] = useState(false);
+
+  const handleValidate = async () => {
+    if (!value || value.length !== 11) return;
+
+    setLoading(true);
+    try {
+      const res = await validateBVN({ bvn_token: value });
+
+      if (res.success) {
+        // Open OTP dialog
+        show({
+          title: "Verify BVN",
+          content: OTPDialog,
+          contentProps: {
+            bvn: value,
+            onVerify: async (otp: string) => {
+              try {
+                await verifyBVNToken({
+                  bvn_token: value.toString(),
+                  verify_token: otp.toString(),
+                });
+                goNext();
+                alert("BVN verified successfully!");
+              } catch (err: any) {
+                alert(err.message || "Failed to verify BVN");
+              }
+            },
+          },
+        });
+      }
+    } catch (err: any) {
+      alert(err.message || "BVN validation failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <motion.div
       key="step-bvn"
@@ -877,16 +967,34 @@ function StepBVN({
             onChange={onChange}
             maxLength={11}
             placeholder="Enter your 11-digit BVN"
-            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${error ? "border-destructive" : ""}`}
+            className={`bg-input border-border text-foreground placeholder:text-muted-foreground pr-10 ${error ? "border-destructive" : ""
+              }`}
           />
           <ErrorTooltip error={error} />
         </div>
       </div>
+
+      <Button onClick={handleValidate} disabled={loading || value.length !== 11}>
+        {loading ? "Validating..." : "Validate BVN"}
+      </Button>
+
       <Alert className="bg-muted border-border">
         <AlertDescription className="text-sm text-muted-foreground">
           Your BVN is a unique 11-digit number that identifies you across all
           Nigerian banks. Dial *565*0# on your registered phone number to
           retrieve it.
+        </AlertDescription>
+        <AlertDescription className="text-sm text-muted-foreground">
+          {"Don't have a BVN? Visit the "}
+          <Link
+            href="https://nrbvn.ares.nrbvn.com"
+            target="_blank"
+            className="text-primary hover:underline inline-flex items-center gap-1"
+          >
+            BVN Registration Portal
+            <ExternalLink className="w-3 h-3" />
+          </Link>
+          {" to create one."}
         </AlertDescription>
       </Alert>
     </motion.div>
