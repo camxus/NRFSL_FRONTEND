@@ -30,7 +30,7 @@ jobs:
           yarn --version
 
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install
         
       - name: Cache node modules
         uses: actions/cache@v3
