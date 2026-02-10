@@ -1,0 +1,56 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches:
+      - dev # Deploy only when pushing to dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      APP_NAME: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install SST
+        run: yarn global add sst pnpm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Unlock SST
+        run: npx sst unlock --stage development || true
+
+      - name: Deploy to AWS via SST
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_GID: ${{ vars.NEXT_GID }}
+          NEXT_SHEETID: ${{ vars.NEXT_SHEETID }}
+          NEXT_GOOGLE_SCRIPT_WEBAPP_URL: ${{ vars.NEXT_GOOGLE_SCRIPT_WEBAPP_URL }}
+        run: npx sst deploy --stage development
