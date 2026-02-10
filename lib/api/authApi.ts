@@ -188,10 +188,10 @@ export const authApi = {
   },
 
   validateBVN: (data: BVNValidateInput) => {
-    return api.post("/validate-bvn", data);
+    return api.post("/auth/validate-bvn", data);
   },
 
   verifyBVNToken: (data: BVNVerifyInput) => {
-    return api.post("/verify-bvn", data);
+    return api.post("/auth/verify-bvn", data);
   }
 };

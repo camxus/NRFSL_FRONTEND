@@ -6,6 +6,7 @@ import { QueryProvider } from '@/components/providers/query-provider'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 import { ThemeProvider } from "@/components/theme-provider"
+import { DialogProvider } from "@/components/providers/dialog-provider"
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -47,8 +48,10 @@ export default function RootLayout({
           enableSystem={true}
         >
           <QueryProvider>
-            {children}
-            <Toaster />
+            <DialogProvider>
+              {children}
+              <Toaster />
+            </DialogProvider>
           </QueryProvider>
           <Analytics />
         </ThemeProvider>

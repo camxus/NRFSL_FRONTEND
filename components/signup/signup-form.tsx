@@ -58,6 +58,7 @@ import { compressImage } from "@/lib/image-compression";
 import { useTheme } from "next-themes";
 import { useDialog } from "@/hooks/use-dialog";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
+import { useToast } from "@/hooks/use-toast";
 
 // Error tooltip component
 function ErrorTooltip({ error }: { error?: string }) {
@@ -125,6 +126,8 @@ const STEPS = [
 export default function SignUpForm() {
   const { theme } = useTheme();
 
+  const {toast} = useToast()
+
   const { signup: { mutateAsync: signup, isPending: isSubmitting }, providusToken } = useAuth()
   const router = useRouter()
 
@@ -158,6 +161,7 @@ export default function SignUpForm() {
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [isOTPVerified, setIsOTPVerified] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -301,7 +305,7 @@ export default function SignUpForm() {
     if (!providusToken) {
       setErrors({ bvn: "BVN must be valid" });
     }
-    
+
     return true;
   };
 
@@ -346,6 +350,9 @@ export default function SignUpForm() {
         if (!validateCredentials()) return;
         break;
       case 1:
+        if (!isOTPVerified) {
+          toast({title: "Please validate your BVN before proceeding"})
+        }
         if (!validateBVN()) return;
         break;
       case 2:
@@ -580,6 +587,7 @@ export default function SignUpForm() {
                   <StepBVN
                     value={formData.bvn}
                     onChange={handleInputChange}
+                    setIsOTPVerified={setIsOTPVerified}
                     error={errors.bvn}
                     goNext={goNext}
                   />
@@ -864,9 +872,11 @@ function StepCredentials({
 // Step Components
 function OTPDialog({
   bvn,
+  otpLength = 6,
   onVerify,
 }: {
   bvn: string;
+  otpLength: number;
   onVerify: (otp: string) => void;
 }) {
   const [otp, setOtp] = useState("");
@@ -876,9 +886,9 @@ function OTPDialog({
       <p className="text-sm text-muted-foreground">
         Enter the OTP sent to your registered phone number for BVN {bvn}.
       </p>
-      <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
+      <InputOTP maxLength={otpLength} value={otp} onChange={setOtp} autoFocus>
         <InputOTPGroup className="mx-auto">
-          {Array.from({ length }).map((_, i) => (
+          {Array.from({ length: otpLength }).map((_, i) => (
             <InputOTPSlot key={i} index={i} />
           ))}
         </InputOTPGroup>
@@ -898,14 +908,17 @@ function OTPDialog({
 export function StepBVN({
   value,
   onChange,
+  setIsOTPVerified,
   error,
   goNext
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setIsOTPVerified: React.Dispatch<React.SetStateAction<boolean>>
   error?: string;
   goNext: () => Promise<void>
 }) {
+  const { toast } = useToast()
   const { validateBVN: { mutateAsync: validateBVN }, verifyBVNToken: { mutateAsync: verifyBVNToken } } = useAuth();
   const { show, hide } = useDialog()
 
@@ -931,17 +944,18 @@ export function StepBVN({
                   bvn_token: value.toString(),
                   verify_token: otp.toString(),
                 });
+                setIsOTPVerified(true)
                 goNext();
-                alert("BVN verified successfully!");
+                toast({title: "BVN verified successfully!"});
               } catch (err: any) {
-                alert(err.message || "Failed to verify BVN");
+                toast({title: err.message || "Failed to verify BVN", variant: "destructive"});
               }
             },
           },
         });
       }
     } catch (err: any) {
-      alert(err.message || "BVN validation failed");
+      toast({title: err.message || "BVN validation failed", variant: "destructive"});
     } finally {
       setLoading(false);
     }
@@ -959,7 +973,7 @@ export function StepBVN({
         <Label htmlFor="bvn" className="text-foreground">
           Bank Verification Number (BVN)
         </Label>
-        <div className="relative">
+        <div className="relative flex space-x-2">
           <Input
             id="bvn"
             name="bvn"
@@ -971,12 +985,12 @@ export function StepBVN({
               }`}
           />
           <ErrorTooltip error={error} />
+
+          <Button onClick={handleValidate} disabled={loading || value.length !== 11}>
+            {loading ? "Validating..." : "Validate BVN"}
+          </Button>
         </div>
       </div>
-
-      <Button onClick={handleValidate} disabled={loading || value.length !== 11}>
-        {loading ? "Validating..." : "Validate BVN"}
-      </Button>
 
       <Alert className="bg-muted border-border">
         <AlertDescription className="text-sm text-muted-foreground">
