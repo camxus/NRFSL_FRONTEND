@@ -10,13 +10,6 @@ export default $config({
     };
   },
   async run() {
-    new sst.aws.Nextjs("diaspora-wallet-frontend", {
-      environment: {
-        NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL!,
-      },
-      // Make the Lambda Function URL public
-      functionUrl: true,
-      functionUrlAuthType: "NONE",
-    });
-  },
+    new sst.aws.Nextjs("diaspora-wallet-frontend")
+  }
 });
