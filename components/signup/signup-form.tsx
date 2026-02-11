@@ -126,7 +126,7 @@ const STEPS = [
 export default function SignUpForm() {
   const { theme } = useTheme();
 
-  const {toast} = useToast()
+  const { toast } = useToast()
 
   const { signup: { mutateAsync: signup, isPending: isSubmitting }, providusToken } = useAuth()
   const router = useRouter()
@@ -302,8 +302,9 @@ export default function SignUpForm() {
       return false;
     }
 
-    if (!providusToken) {
-      setErrors({ bvn: "BVN must be valid" });
+    if (!isOTPVerified) {
+      toast({ title: "Please validate your BVN before proceeding" })
+      return false;
     }
 
     return true;
@@ -350,9 +351,6 @@ export default function SignUpForm() {
         if (!validateCredentials()) return;
         break;
       case 1:
-        if (!isOTPVerified) {
-          toast({title: "Please validate your BVN before proceeding"})
-        }
         if (!validateBVN()) return;
         break;
       case 2:
@@ -946,16 +944,16 @@ export function StepBVN({
                 });
                 setIsOTPVerified(true)
                 goNext();
-                toast({title: "BVN verified successfully!"});
+                toast({ title: "BVN verified successfully!" });
               } catch (err: any) {
-                toast({title: err.message || "Failed to verify BVN", variant: "destructive"});
+                toast({ title: err.message || "Failed to verify BVN", variant: "destructive" });
               }
             },
           },
         });
       }
     } catch (err: any) {
-      toast({title: err.message || "BVN validation failed", variant: "destructive"});
+      toast({ title: err.message || "BVN validation failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
