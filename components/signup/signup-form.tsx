@@ -1047,7 +1047,7 @@ function StepNIN({
           <ErrorTooltip error={error} />
         </div>
       </div>
-      <Alert className="bg-muted border-border">
+      {/* <Alert className="bg-muted border-border">
         <AlertDescription className="text-sm text-muted-foreground">
           {"Don't have a NIN? Visit the "}
           <Link
@@ -1060,7 +1060,7 @@ function StepNIN({
           </Link>
           {" to create one."}
         </AlertDescription>
-      </Alert>
+      </Alert> */}
     </motion.div>
   );
 }
