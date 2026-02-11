@@ -10,18 +10,9 @@ export default $config({
     };
   },
   async run() {
-    const site = new sst.aws.Nextjs("diaspora-wallet-frontend", {
+    new sst.aws.Nextjs("diaspora-wallet-frontend", {
       functionUrl: true,
       functionUrlAuthType: "NONE",
-    });
-
-    // Add full invoke permission
-    site.serverFunction.addPermission(`${site.id}-AllowAllInvoke`, {
-      principal: new iam.AnyPrincipal(),
-      action: [
-        "lambda:InvokeFunctionUrl",
-        "lambda:InvokeFunction",
-      ],
     });
   }
 });
