@@ -56,11 +56,11 @@ jobs:
           echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 
       - name: Unlock SST
-        run: npx sst unlock --stage production || true
+        run: npx sst unlock --stage production --print-logs || true
 
       - name: Deploy to AWS via SST
         env:
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
         run: |
           export PATH=$HOME/.pulumi/bin:$PATH
-          npx sst deploy --stage production
+          npx sst deploy --stage production --print-logs
