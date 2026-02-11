@@ -9,6 +9,6 @@ export default $config({
     };
   },
   async run() {
-    new sst.aws.Nextjs("diasporawallet-frontend");
+    new sst.aws.Nextjs("diaspora-wallet-frontend");
   }
 });
