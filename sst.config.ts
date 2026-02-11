@@ -5,14 +5,10 @@ export default $config({
     return {
       name: "DiasporaWallet",
       removal: input?.stage === "production" ? "retain" : "remove",
-      protect: ["production"].includes(input?.stage),
       home: "aws",
     };
   },
   async run() {
-    new sst.aws.Nextjs("diaspora-wallet-frontend", {
-      functionUrl: true,
-      functionUrlAuthType: "NONE",
-    });
+    new sst.aws.Nextjs("diasporawallet-frontend");
   }
 });
