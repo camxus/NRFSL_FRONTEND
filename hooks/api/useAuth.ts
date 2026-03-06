@@ -17,10 +17,12 @@ import {
   setCookieClient,
 } from "@/lib/cookie";
 import { getLocalStorage, setLocalStorage } from "@/lib/localStorage";
+import { useToast } from "../use-toast";
 
 export const AUTH_USER_KEY = "user";
 
 export function useAuth() {
+  const { toast } = useToast()
   const queryClient = useQueryClient();
   const router = useRouter();
   const [providusToken, setProvidusToken] = useState<string | null>(null)
@@ -49,9 +51,10 @@ export function useAuth() {
 
   // Signup mutation
   const signup = useMutation({
-    mutationFn: (data: SignupRequest) => authApi.signup({...data, providus_token: providusToken}),
+    mutationFn: (data: SignupRequest) => authApi.signup({ ...data, providus_token: providusToken }),
     onSuccess: () => { },
     onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
       setError(error.message || "Failed to create account");
     },
   });

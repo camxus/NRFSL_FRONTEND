@@ -128,6 +128,8 @@ export const authApi = {
     formData.append("first_name", data.first_name);
     formData.append("last_name", data.last_name);
     formData.append("birthdate", data.birthdate);
+    if (data.phone_number) formData.append("phone_number", data.phone_number);
+    
     if (data.kyc) formData.append("kyc", JSON.stringify(data.kyc));
 
     if (data.avatar) formData.append("avatar", JSON.stringify(data.avatar));
@@ -137,6 +139,7 @@ export const authApi = {
     if (data.identity) formData.append("identity", data.identity);
     if (data.utility) formData.append("utility", data.utility);
     if (data.signature) formData.append("signature", data.signature);
+    if (data.providus_token) formData.append("providus_token", data.providus_token);
 
     return api.post("/auth/signup", formData, {
       headers: {

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 
 import { useState, useRef } from "react";
 import { List, type RowComponentProps } from "react-window";
@@ -101,6 +101,7 @@ interface FormData {
   occupation: string;
   nextOfKin: string;
   nextOfKinPhone: string;
+  repeat_password?: string;
 }
 
 interface UploadedFiles {
@@ -128,7 +129,8 @@ export default function SignUpForm() {
 
   const { toast } = useToast()
 
-  const { signup: { mutateAsync: signup, isPending: isSubmitting }, providusToken } = useAuth()
+  const { signup: { mutateAsync: signup, isPending: isSubmitting }, validateBVN: { mutateAsync: validateBVN }, verifyBVNToken: { mutateAsync: verifyBVNToken }, providusToken } = useAuth()
+
   const router = useRouter()
 
   const [step, setStep] = useState(0);
@@ -146,6 +148,7 @@ export default function SignUpForm() {
     phone: "",
     email: "",
     password: "",
+    repeat_password: "",
     occupation: "",
     nextOfKin: "",
     nextOfKinPhone: "",
@@ -274,25 +277,39 @@ export default function SignUpForm() {
   const validateCredentials = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    // Email validation
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
 
+    // Password validation
     if (!formData.password.trim()) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(formData.password)) {
+      const message = "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+      toast({ title: message, variant: "destructive" });
+      newErrors.password =
+        "Password must be at least 8 characters and include uppercase, lowercase, and a number";
     }
 
+    // Repeat password validation
+    if (formData.repeat_password && !formData.repeat_password.trim()) {
+      newErrors.repeat_password = "Please confirm your password";
+    } else if (formData.password !== formData.repeat_password) {
+      newErrors.repeat_password = "Passwords do not match";
+    }
+
+
     setErrors(newErrors);
+
+    // Return true only if no errors
     return Object.keys(newErrors).length === 0;
   };
 
-
   // Validation functions
-  const validateBVN = (): boolean => {
+  const validateBVNFn = (): boolean => {
     if (!formData.bvn || formData.bvn.length !== 11) {
       setErrors({ bvn: "BVN must be exactly 11 digits" });
       return false;
@@ -351,7 +368,7 @@ export default function SignUpForm() {
         if (!validateCredentials()) return;
         break;
       case 1:
-        if (!validateBVN()) return;
+        if (!validateBVNFn()) return;
         break;
       case 2:
         if (!validateNIN()) return;
@@ -417,6 +434,10 @@ export default function SignUpForm() {
   };
 
   const handleSubmit = async () => {
+    if (!providusToken) return
+
+    const phone = formData.phone.replace(/\s+/g, "")
+
     // Simulate API call
     await signup({
       password: formData.password,
@@ -424,19 +445,20 @@ export default function SignUpForm() {
       first_name: formData.first_name,
       last_name: formData.last_name,
       birthdate: formData.birthdate,
+      phone_number: phone,
       kyc: {
         bvn: +formData.bvn,
         nin: +formData.nin,
         country: formData.country,
         occupation: formData.occupation,
-        religion: "",
-        altEmail: "",
-        altPhone: "",
+        religion: "0",
+        altEmail: formData.email,
+        altPhone: phone,
         currentAddress: formData.streetAddress,
-        motherMaidenName: "",
+        motherMaidenName: "N/A",
         residentState: formData.state,
         residentLGA: formData.city,
-        residentOtherLGA: ""
+        residentOtherLGA: "N/A"
       },
       passport: uploadedFiles.passport,
       utility: uploadedFiles.utilityBill,
@@ -584,7 +606,10 @@ export default function SignUpForm() {
                 {step === 1 && (
                   <StepBVN
                     value={formData.bvn}
+                    validateBVN={validateBVN}
+                    verifyBVNToken={verifyBVNToken}
                     onChange={handleInputChange}
+                    isOTPVerified={isOTPVerified}
                     setIsOTPVerified={setIsOTPVerified}
                     error={errors.bvn}
                     goNext={goNext}
@@ -725,16 +750,16 @@ function StepCredentials({
   onChange,
   errors,
 }: {
-  formData: FormData & { repeat_password?: string };
+  formData: FormData;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   errors: Record<string, string>;
 }) {
-  const [birthdate, setBirthdate] = React.useState<Date | null>(
-    formData.birthdate ? new Date(formData.birthdate) : null
+  const [birthdate, setBirthdate] = React.useState<string | null>(
+    formData.birthdate ? format(new Date(formData.birthdate), "yyyy-MM-dd") : null
   );
 
-  const handleDateChange = (date: Date | null) => {
-    setBirthdate(date);
+  const handleDateChange = (date: Date) => {
+    setBirthdate(format(date, "yyyy-MM-dd"));
     // convert to YYYY-MM-DD format for formData
     onChange({
       target: { name: "birthdate", value: date ? format(date, "yyyy-MM-dd") : "" },
@@ -795,7 +820,7 @@ function StepCredentials({
           Birthdate
         </Label>
         <DateTimePicker
-          value={birthdate || new Date()}
+          value={new Date(birthdate || "")}
           onChange={(date) => {
             handleDateChange(date);
           }}
@@ -906,21 +931,30 @@ function OTPDialog({
 export function StepBVN({
   value,
   onChange,
+  validateBVN,
+  verifyBVNToken,
+  isOTPVerified,
   setIsOTPVerified,
   error,
   goNext
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  validateBVN: (e: any) => any
+  verifyBVNToken: (e: any) => any,
+  isOTPVerified: boolean
   setIsOTPVerified: React.Dispatch<React.SetStateAction<boolean>>
   error?: string;
   goNext: () => Promise<void>
 }) {
   const { toast } = useToast()
-  const { validateBVN: { mutateAsync: validateBVN }, verifyBVNToken: { mutateAsync: verifyBVNToken } } = useAuth();
   const { show, hide } = useDialog()
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOTPVerified) goNext()
+  }, [isOTPVerified])
 
   const handleValidate = async () => {
     if (!value || value.length !== 11) return;
@@ -929,7 +963,7 @@ export function StepBVN({
     try {
       const res = await validateBVN({ bvn_token: value });
 
-      if (res.success) {
+      if (res.data.result.accessToken) {
         // Open OTP dialog
         show({
           title: "Verify BVN",
@@ -939,10 +973,11 @@ export function StepBVN({
             onVerify: async (otp: string) => {
               try {
                 await verifyBVNToken({
-                  bvn_token: value.toString(),
+                  bvn_token: res.data.result.accessToken.toString(),
                   verify_token: otp.toString(),
                 });
                 setIsOTPVerified(true)
+                hide()
                 goNext();
                 toast({ title: "BVN verified successfully!" });
               } catch (err: any) {
